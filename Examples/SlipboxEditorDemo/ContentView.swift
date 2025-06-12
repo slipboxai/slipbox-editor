@@ -14,7 +14,7 @@ struct SlipboxEditorDemoApp: App {
 }
 
 struct ContentView: View {
-    @StateObject private var editorModel = SlipboxEditorModel()
+    @State private var editorModel = SlipboxEditorModel()
     @State private var showingHTMLSource = false
     @State private var showingSettings = false
     @State private var savedStates: [SavedDocument] = []
@@ -81,8 +81,7 @@ struct ContentView: View {
         VStack(spacing: 0) {
             EditorStatusBar(model: editorModel)
             Divider()
-            SlipboxEditorView()
-                .environmentObject(editorModel)
+            SlipboxEditorView(model: editorModel)
         }
     }
 
@@ -185,7 +184,7 @@ struct DocumentRowView: View {
 }
 
 struct EditorStatusBar: View {
-    @ObservedObject var model: SlipboxEditorModel
+    var model: SlipboxEditorModel
 
     var body: some View {
         HStack {
