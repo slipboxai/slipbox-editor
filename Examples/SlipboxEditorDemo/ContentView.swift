@@ -1,11 +1,23 @@
+import Foundation
 import SlipboxEditor
 import SwiftUI
 
 @main
 struct SlipboxEditorDemoApp: App {
+    init() {
+        // Ensure bundle identifier is set
+        if Bundle.main.bundleIdentifier == nil {
+            UserDefaults.standard.set("com.slipbox.editor.demo", forKey: "CFBundleIdentifier")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if SlipboxEditor.isSupported {
+                ContentView()
+            } else {
+                UnsupportedView()
+            }
         }
         #if os(macOS)
             .defaultSize(width: 1000, height: 700)
@@ -13,11 +25,12 @@ struct SlipboxEditorDemoApp: App {
     }
 }
 
+@available(iOS 26.0, macOS 26.0, *)
 struct ContentView: View {
     @State private var editorModel = SlipboxEditorModel()
-    @State private var showingHTMLSource = false
+    @State private var showingMarkdownSource = false
     @State private var showingSettings = false
-    @State private var savedStates: [SavedDocument] = []
+    @State private var savedDocuments: [SavedDocument] = []
 
     var body: some View {
         NavigationSplitView {
@@ -25,16 +38,16 @@ struct ContentView: View {
         } detail: {
             editorDetailView
         }
-        .navigationTitle("SlipboxEditor Demo")
+        .navigationTitle("SlipboxEditor 2.0 Demo")
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Save") {
                     saveCurrentDocument()
                 }
-                .disabled(!editorModel.isReady || editorModel.plainText.isEmpty)
+                .disabled(!editorModel.isReady || editorModel.markdownContent.isEmpty)
 
-                Button("HTML") {
-                    showingHTMLSource = true
+                Button("Markdown") {
+                    showingMarkdownSource = true
                 }
                 .disabled(!editorModel.isReady)
 
@@ -43,14 +56,14 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingHTMLSource) {
-            HTMLSourceView(html: editorModel.htmlContent)
+        .sheet(isPresented: $showingMarkdownSource) {
+            MarkdownSourceView(markdown: editorModel.markdownContent)
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView()
+            ModernSettingsView()
         }
         .onAppear {
-            loadSavedDocuments()
+            loadSampleDocuments()
         }
     }
 
@@ -58,7 +71,7 @@ struct ContentView: View {
         VStack {
             List {
                 Section("Documents") {
-                    ForEach(savedStates) { doc in
+                    ForEach(savedDocuments) { doc in
                         DocumentRowView(document: doc) {
                             loadDocument(doc)
                         }
@@ -79,7 +92,7 @@ struct ContentView: View {
 
     private var editorDetailView: some View {
         VStack(spacing: 0) {
-            EditorStatusBar(model: editorModel)
+            ModernStatusBar(model: editorModel)
             Divider()
             SlipboxEditorView(model: editorModel)
         }
@@ -92,17 +105,17 @@ struct ContentView: View {
     }
 
     private func saveCurrentDocument() {
-        let title = extractTitle(from: editorModel.plainText)
-        let preview = extractPreview(from: editorModel.plainText)
+        let title = extractTitle(from: editorModel.markdownContent)
+        let preview = extractPreview(from: editorModel.markdownContent)
 
         let document = SavedDocument(
             title: title,
-            content: editorModel.htmlContent,
+            content: editorModel.markdownContent,
             preview: preview,
             date: Date()
         )
 
-        savedStates.append(document)
+        savedDocuments.append(document)
         saveToDisk()
     }
 
@@ -113,40 +126,123 @@ struct ContentView: View {
     }
 
     private func deleteDocuments(offsets: IndexSet) {
-        savedStates.remove(atOffsets: offsets)
+        savedDocuments.remove(atOffsets: offsets)
         saveToDisk()
     }
 
     private func extractTitle(from text: String) -> String {
         let lines = text.components(separatedBy: .newlines)
         let firstLine = lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return firstLine.isEmpty ? "Untitled Document" : String(firstLine.prefix(50))
+
+        // Remove markdown heading syntax
+        let cleanedLine = firstLine.replacingOccurrences(
+            of: "^#+\\s*", with: "", options: .regularExpression)
+
+        return cleanedLine.isEmpty ? "Untitled Document" : String(cleanedLine.prefix(50))
     }
 
     private func extractPreview(from text: String) -> String {
-        let preview = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return String(preview.prefix(100))
+        // Remove markdown syntax for preview
+        let cleanText =
+            text
+            .replacingOccurrences(of: "^#+\\s*", with: "", options: .regularExpression)
+            .replacingOccurrences(
+                of: "\\*\\*([^*]+)\\*\\*", with: "$1", options: .regularExpression
+            )
+            .replacingOccurrences(of: "\\*([^*]+)\\*", with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: "^>\\s*", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return String(cleanText.prefix(100))
     }
 
-    private func loadSavedDocuments() {
-        // In a real app, load from persistent storage
-        // For demo purposes, we'll start with some sample documents
-        if savedStates.isEmpty {
-            savedStates = [
+    private func loadSampleDocuments() {
+        // Load sample documents for demo
+        if savedDocuments.isEmpty {
+            savedDocuments = [
                 SavedDocument(
-                    title: "Welcome to SlipboxEditor",
-                    content:
-                        "<h1>Welcome to SlipboxEditor</h1><p>This is a powerful rich text editor built with <strong>Swift 6.1</strong> and JavaScript interoperability.</p><p><strong>Features:</strong></p><ul><li>Rich text formatting</li><li>Image support</li><li>Cross-platform compatibility</li><li>Offline-first design</li></ul><p>Try the formatting buttons in the toolbar above, or use keyboard shortcuts like <strong>⌘B</strong> for bold, <strong>⌘I</strong> for italic, and <strong>⌘U</strong> for underline.</p>",
+                    title: "Welcome to SlipboxEditor 2.0",
+                    content: """
+                        # Welcome to SlipboxEditor 2.0
+
+                        This is a **modern markdown editor** built with iOS 26 and macOS 26's latest WebKit SwiftUI APIs.
+
+                        ## Features
+
+                        - **Live markdown shortcuts**: Type `# ` for headings, `- ` for lists
+                        - **Command palette**: Type `/` to see available blocks
+                        - **Keyboard shortcuts**: ⌘B for bold, ⌘I for italic, ⌘K for links
+                        - **Native integration**: Uses WebKit SwiftUI for perfect platform integration
+
+                        ## Try it out!
+
+                        Start typing to see the markdown shortcuts in action. Try:
+
+                        1. Type `# ` at the beginning of a line for a heading
+                        2. Type `- ` for a bullet list
+                        3. Type `/` to open the command palette
+                        4. Use ⌘B to make text **bold**
+
+                        > This editor provides a clean, Notion-like writing experience with the power of markdown.
+
+                        Happy writing! ✨
+                        """,
                     preview:
-                        "This is a powerful rich text editor built with Swift 6.1 and JavaScript interoperability...",
+                        "This is a modern markdown editor built with iOS 26 and macOS 26's latest WebKit SwiftUI APIs...",
                     date: Date().addingTimeInterval(-86400)
                 ),
                 SavedDocument(
-                    title: "Getting Started Guide",
-                    content:
-                        "<h2>Getting Started with SlipboxEditor</h2><p>Welcome to the demo! Here's what you can do:</p><ol><li><strong>Edit this text</strong> - Click anywhere and start typing</li><li><strong>Use the toolbar</strong> - Try the formatting buttons above</li><li><strong>Create new documents</strong> - Use the sidebar to manage multiple documents</li><li><strong>View HTML source</strong> - Click the HTML button to see the generated markup</li></ol><blockquote>💡 <em>Tip: This editor works completely offline and provides type-safe communication between Swift and JavaScript!</em></blockquote><h3>Advanced Features</h3><p>Try inserting images, creating lists, and using the various formatting options. The editor supports:</p><ul><li>Headers (H1, H2, H3)</li><li>Bold, italic, underline, strikethrough</li><li>Bulleted and numbered lists</li><li>Blockquotes and code blocks</li><li>Image insertion</li><li>Undo/redo with ⌘Z/⌘⇧Z</li></ul>",
+                    title: "Markdown Syntax Guide",
+                    content: """
+                        # Markdown Syntax Guide
+
+                        ## Headers
+
+                        Use `#` for headers:
+
+                        ```
+                        # H1
+                        ## H2
+                        ### H3
+                        ```
+
+                        ## Text Formatting
+
+                        - **Bold text**: `**text**` or `__text__`
+                        - *Italic text*: `*text*` or `_text_`
+                        - `Inline code`: \\`code\\`
+
+                        ## Lists
+
+                        ### Unordered
+                        - Item 1
+                        - Item 2
+                        - Item 3
+
+                        ### Ordered
+                        1. First item
+                        2. Second item
+                        3. Third item
+
+                        ## Blockquotes
+
+                        > This is a blockquote
+                        > It can span multiple lines
+
+                        ## Code Blocks
+
+                        ```swift
+                        func hello() {
+                            print("Hello, World!")
+                        }
+                        ```
+
+                        ## Links
+
+                        [Link text](https://example.com)
+                        """,
                     preview:
-                        "Welcome to the demo! Here's what you can do: Edit this text, use the toolbar, create new documents...",
+                        "A comprehensive guide to markdown syntax supported by SlipboxEditor...",
                     date: Date().addingTimeInterval(-3600)
                 ),
             ]
@@ -155,7 +251,7 @@ struct ContentView: View {
 
     private func saveToDisk() {
         // In a real app, persist to disk/Core Data/CloudKit
-        print("Saving \(savedStates.count) documents")
+        print("Saving \(savedDocuments.count) documents")
     }
 }
 
@@ -183,8 +279,9 @@ struct DocumentRowView: View {
     }
 }
 
-struct EditorStatusBar: View {
-    var model: SlipboxEditorModel
+@available(iOS 26.0, macOS 26.0, *)
+struct ModernStatusBar: View {
+    let model: SlipboxEditorModel
 
     var body: some View {
         HStack {
@@ -194,15 +291,13 @@ struct EditorStatusBar: View {
                         .foregroundColor(.green)
                         .font(.caption)
 
-                    Text("Characters: \(model.plainText.count)")
+                    Text("Characters: \(model.markdownContent.count)")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    if let range = model.selectedRange, range.length > 0 {
-                        Text("Selected: \(range.length)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("Lines: \(model.markdownContent.components(separatedBy: .newlines).count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             } else {
                 HStack(spacing: 8) {
@@ -216,53 +311,32 @@ struct EditorStatusBar: View {
 
             Spacer()
 
-            // Quick actions
-            HStack(spacing: 8) {
-                Button("Undo") {
-                    Task {
-                        try? await model.executeCommand(
-                            SlipboxEditorCommand(action: .undo, data: nil))
-                    }
-                }
-                .disabled(!model.isReady)
-                .buttonStyle(.borderless)
-
-                Button("Redo") {
-                    Task {
-                        try? await model.executeCommand(
-                            SlipboxEditorCommand(action: .redo, data: nil))
-                    }
-                }
-                .disabled(!model.isReady)
-                .buttonStyle(.borderless)
-            }
+            // Tips
+            Text("💡 Type / for commands, ⌘B for bold")
+                .font(.caption2)
+                .foregroundColor(.secondary)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        #if os(macOS)
-            .background(Color(NSColor.controlBackgroundColor))
-        #else
-            .background(Color(UIColor.systemBackground))
-        #endif
     }
 }
 
-struct HTMLSourceView: View {
-    let html: String
+struct MarkdownSourceView: View {
+    let markdown: String
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
-                Text(html.isEmpty ? "No content" : html)
+                Text(markdown.isEmpty ? "No content" : markdown)
                     .font(.system(.body, design: .monospaced))
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
-            .navigationTitle("HTML Source")
-            #if os(iOS)
+            .navigationTitle("Markdown Source")
+            #if !os(macOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -276,7 +350,7 @@ struct HTMLSourceView: View {
                     Button(copied ? "Copied!" : "Copy") {
                         copyToClipboard()
                     }
-                    .disabled(html.isEmpty)
+                    .disabled(markdown.isEmpty)
                 }
             }
         }
@@ -286,9 +360,9 @@ struct HTMLSourceView: View {
     private func copyToClipboard() {
         #if os(macOS)
             NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(html, forType: .string)
+            NSPasteboard.general.setString(markdown, forType: .string)
         #else
-            UIPasteboard.general.string = html
+            UIPasteboard.general.string = markdown
         #endif
 
         copied = true
@@ -298,66 +372,52 @@ struct HTMLSourceView: View {
     }
 }
 
-struct SettingsView: View {
+struct ModernSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
-                Section("About SlipboxEditor") {
+                Section("About SlipboxEditor 2.0") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Version: \(SlipboxEditor.version)")
-                        Text("Built with Swift 6.1+")
-                        Text("JavaScript Interoperability")
-                        Text("Powered by Quill.js")
+                        Text("Built for iOS 26+ and macOS 26+")
+                        Text("WebKit SwiftUI Native")
+                        Text("Notion-like Markdown Editor")
                     }
                     .font(.caption)
                 }
 
                 Section("Features") {
-                    Label("Rich Text Editing", systemImage: "textformat")
-                    Label("Cross-Platform Support", systemImage: "laptopcomputer.and.iphone")
-                    Label("Offline Capability", systemImage: "wifi.slash")
-                    Label("Type-Safe Communication", systemImage: "checkmark.shield")
+                    ForEach(SlipboxEditor.features, id: \.self) { feature in
+                        Label(feature, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    }
+                }
+
+                Section("Markdown Shortcuts") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ShortcutRow("Heading 1", "# + space")
+                        ShortcutRow("Heading 2", "## + space")
+                        ShortcutRow("Heading 3", "### + space")
+                        ShortcutRow("Bullet List", "- + space")
+                        ShortcutRow("Numbered List", "1. + space")
+                        ShortcutRow("Blockquote", "> + space")
+                        ShortcutRow("Command Palette", "/")
+                    }
                 }
 
                 Section("Keyboard Shortcuts") {
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("Bold")
-                            Spacer()
-                            Text("⌘B")
-                                .font(.caption.monospaced())
-                        }
-                        HStack {
-                            Text("Italic")
-                            Spacer()
-                            Text("⌘I")
-                                .font(.caption.monospaced())
-                        }
-                        HStack {
-                            Text("Underline")
-                            Spacer()
-                            Text("⌘U")
-                                .font(.caption.monospaced())
-                        }
-                        HStack {
-                            Text("Undo")
-                            Spacer()
-                            Text("⌘Z")
-                                .font(.caption.monospaced())
-                        }
-                        HStack {
-                            Text("Redo")
-                            Spacer()
-                            Text("⌘⇧Z")
-                                .font(.caption.monospaced())
-                        }
+                        ShortcutRow("Bold", "⌘B")
+                        ShortcutRow("Italic", "⌘I")
+                        ShortcutRow("Link", "⌘K")
+                        ShortcutRow("Find", "⌘F")
                     }
                 }
             }
             .navigationTitle("Settings")
-            #if os(iOS)
+            #if !os(macOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
@@ -369,6 +429,53 @@ struct SettingsView: View {
             }
         }
         .frame(minWidth: 400, minHeight: 500)
+    }
+}
+
+struct ShortcutRow: View {
+    let name: String
+    let shortcut: String
+
+    init(_ name: String, _ shortcut: String) {
+        self.name = name
+        self.shortcut = shortcut
+    }
+
+    var body: some View {
+        HStack {
+            Text(name)
+            Spacer()
+            Text(shortcut)
+                .font(.caption.monospaced())
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.gray)
+                .cornerRadius(4)
+        }
+    }
+}
+
+struct UnsupportedView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.orange)
+
+            Text("Unsupported Platform")
+                .font(.title)
+                .fontWeight(.bold)
+
+            Text("SlipboxEditor 2.0 requires iOS 26+ or macOS 26+")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+
+            Text("This demo uses the latest WebKit SwiftUI APIs")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
     }
 }
 
@@ -389,5 +496,9 @@ struct SavedDocument: Identifiable, Codable {
 }
 
 #Preview {
-    ContentView()
+    if SlipboxEditor.isSupported {
+        ContentView()
+    } else {
+        UnsupportedView()
+    }
 }

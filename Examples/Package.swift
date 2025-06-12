@@ -4,8 +4,8 @@ import PackageDescription
 let package = Package(
     name: "SlipboxEditorExamples",
     platforms: [
-        .macOS("15.4"),
-        .iOS(.v16),
+        .macOS("26"),
+        .iOS("26"),
     ],
     products: [
         .executable(

@@ -85,6 +85,8 @@ Examples/.DS_Store
 Examples/.gitignore
 Examples/.gitignore
 
+WebKit/
+
 .claude/
 .build/
 .swiftpm/

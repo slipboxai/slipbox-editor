@@ -6,8 +6,8 @@ import PackageDescription
 let package = Package(
     name: "slipbox-editor",
     platforms: [
-        .macOS("15.4"),
-        .iOS(.v16),
+        .macOS("26"),
+        .iOS("26"),
     ],
     products: [
         .library(

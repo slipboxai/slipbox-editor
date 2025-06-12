@@ -3,15 +3,29 @@ import Foundation
 // MARK: - Editor Commands
 public struct EditorCommand: Codable {
     public enum Action: String, Codable {
+        // Text formatting
         case bold, italic, underline, strike
+        
+        // Content operations
         case insertText, insertImage, insertLink
         case setContent, getContent
         case format, align
         case undo, redo
+        
+        // Block operations (Notion-like)
+        case insertBlock, deleteBlock, moveBlock
+        case duplicateBlock, convertBlock
+        
+        // Legacy format support
         case insertList, insertOrderedList
         case heading1, heading2, heading3
         case blockquote, codeBlock
         case insertTable, insertHR
+        
+        // Advanced features
+        case insertCallout, insertToggle
+        case insertDivider, insertQuote
+        case selectBlock, focusBlock
     }
     
     public let action: Action
