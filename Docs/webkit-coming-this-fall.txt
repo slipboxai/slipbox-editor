@@ -1,0 +1,569 @@
+News from WWDC25:
+WebKit in Safari 26 beta
+Jun 9, 2025
+
+by Jen Simmons, Saron Yitbarek, Jon Davis, Richard Robinson, Eddy Wong, Brandel Zachernuk, Marcos Cáceres, Tim Nguyen, Daniel Liu, Razvan Caliman, Blaze Burg, Qianlang Chen, Brian Weinstein, Aditya Keerthi, Karl Dubost, David Johnson, Luming Yin
+
+Contents
+SVG Icons
+Every site can be a web app on iOS and iPadOS
+HDR Images
+WebKit in SwiftUI
+<model> on visionOS
+Immersive video and audio on visionOS
+WebGPU
+CSS
+Digital Credentials API
+Web API
+JavaScript
+Editing
+SVG
+Media
+WebRTC
+Web Inspector
+Web Extensions
+WebKit API
+WebAssembly
+Privacy
+Networking
+Lockdown Mode
+Website Compatibility
+Bug Fixes and more
+Try out Safari 26 beta
+Feedback
+Welcome to WWDC25! We’ve got lots of exciting announcements about web technology to share with you this week. Don’t miss our seven sessions, including What’s new in Safari and WebKit.
+
+Today brings the beta of Safari 26, with 67 new features and 107 improvements. We’ll take a tour of them all in this article. But first — Safari 26? Where is Safari 19?
+
+You might have seen today during the WWDC25 Keynote that macOS, iOS, iPadOS, visionOS, and watchOS have all been relabeled to now share the same version number — 26 for 2026. Safari is being renumbered as well.
+
+It was four years ago that we unified the Safari version numbers across platforms, and started marking every update with a X.Y number — including, for example: Safari 16.0, Safari 17.2, and Safari 18.4. This change made all of our releases much more visible to web developers. Both Can I Use and MDN BCD started showing data about the new web technology in all seven releases each year.
+
+While the version number is jumping from 18.x to 26.x, the manner in which point releases of Safari contain significant improvements to the underlying web technology will stay the same. The changes that you care about most as someone who make websites will continue to appear all year around.
+
+So, let’s take a look at the web technology arriving today in Safari 26 beta.
+
+SVG Icons
+Safari 26 beta now supports the SVG file format for icons everyplace there are icons in the interface, including favicons.
+
+For years, favicons were just displayed in the browser window’s URL bar, or in a menu of favorites. Now, icons show up in a range of places across browsers, at wildly different sizes. That includes the Safari start page, where icons represent content in Reading List, iCloud Tabs, Suggestions and Favorites. For web apps, this same icon represents the website on the user’s Home Screen or in their Dock. And icons are, of course, used in Safari tabs and menus.
+
+By using an SVG file for your icon, you leverage infinite vector scaling. You rely on Safari to do the work of creating rasterized icons at multiple sizes to be used in various locations. And an SVG file is also often a smaller download than the .png files commonly used for favicons.
+
+Data URL images are also now supported for icons as well, allowing you to embed small files in documents.
+
+Every site can be a web app on iOS and iPadOS
+iPhone users have been able to put a website’s icon on their Home Screen for quick access since Jan 2008, with “Add to Home Screen” shipping in iPhone OS 1.1.3. Tapping the icon opened the site in Safari.
+
+Eight months later, with iPhone OS 2.1, web developers could start configuring their website with “the standalone mode to look more like a native application” by using the <meta name="apple-mobile-web-app-capable" content="yes"> tag. In 2013, the W3C began the standardization process of Web Application Manifest, making it possible to configure web app behavior with a JSON manifest file. Support for Web Application Manifest started landing in browsers in November 2014, and was added to Safari with iOS 11.4 in March 2018.
+
+For the last 17 years, if the website had the correct meta tag or Web Application Manifest display value, and the user added it to their Home Screen in iOS or iPadOS, tapping the icon opened it as a web app. If the website was not configured as such, tapping the icon opened the site in the browser.
+
+On Mac, we took a different approach when introducing Web Apps on Mac in Sep 2023. There, it doesn’t matter whether or not the website has a Web Application Manifest — it always opens as a web app. We don’t want our users to experience a mysterious difference in behavior because of the presence or absence of invisible technology. Users should have a consistent experience.
+
+Now, we are bringing this new behavior to iOS and iPadOS. By default, every website added to the Home Screen opens as a web app. If the user prefers to add a bookmark that opens in their default browser, they can turn off “Open as Web App”, even if the site is configured to be a web app. It’s up to users to decide. And the UI is always the same.
+
+iPhone in the process of adding a website to the Home Screen. The UI shows the site icon, editable name, and a toggle turned on to Open as Web App.
+This change, of course, is not removing any of WebKit’s current support for web app features! If the site you built has a Web Application Manifest, then all of the benefits it provides will be part of the user’s experience. If you define your icons in the manifest, they’re used! If you want to provide an offline experience by using a Service Worker, great!
+
+We value the principles of progressive enhancement and separation of concerns. All of the same web technology is available to you as a developer, to build the experience you would like to build. Just now, nothing is required beyond the basics of an HTML file and a URL to provide a web app experience to users. As a developer, you get to layer on whatever you want with CSS, JS, Web API, and more. And users get to add any site to their Home Screen, and open it as a web app.
+
+HDR Images
+The human eye can typically handle seeing things lit by bright light and sitting in dark shadows at the same time. The contrast your eyes see between brightness and darkness is called dynamic range, and it’s very challenging to reproduce.
+
+As digital photography and videography improved by leaps and bounds over the years, the ability to digitally capture a dynamic range has greatly improved. The High Dynamic Range (HDR) format takes this even further, allowing you to capture both a wider dynamic range and increased color gamut, creating more vivid and realistic-looking images and video. Parallel breakthroughs in display technology have made it possible to present such images for others to view, with deep true blacks, pure bright whites and dramatic nuances in between.
+
+WebKit shipped support for HDR video in Safari 14.0, in 2020. Now, in Safari beta for iOS 26, iPadOS 26, macOS 26 and visionOS 26, WebKit adds support for HDR images on the web. You can embed images with high dynamic range into a webpage, just like other images — including images in Canvas.
+
+Safari 26 beta also adds support for the new dynamic-range-limit property in CSS. This property lets you control what happens when presenting a mix of standard dynamic range (SDR) and HDR video or images together. Currently, the Safari beta supports the no-limit and standard values. Using no-limit tells the browser to let content be as is — HDR content is presented in HDR. Using standard converts all of the HDR content to SDR, and displays it within the limits of standard dynamic range. Doing so prevents HDR images and video from appearing overly bright or out of place next to SDR content, which can be especially helpful when users or third-parties provide content.
+
+WebKit in SwiftUI
+WebKit has a brand-new API designed from the ground up to work with Swift and SwiftUI. This makes it easier than ever to integrate web content into apps built for Apple platforms.
+
+A slide from the WWDC25 session on WebKit in SwiftUI with a collection of concepts from the session — Observable properties, Handle custom schemes, Designed for Swift UI, Customized navigations, Back / forward / list, HTML on a webpage, WebView, Custom dialogs, JavaScript…
+
+The core parts of this new API are the new WebView and WebPage types.
+
+WebView
+To display your web content, simply use the new WebView type, a brand-new native SwiftUI View. All you need to do is give it a URL to display.
+
+struct ContentView: View {
+    var body: some View {
+        WebView(
+            url: URL(string: "https://www.webkit.org")
+        )
+    }
+}
+WebView also supports a powerful set of new and existing view modifiers, like webViewScrollPosition, webViewMagnificationGestures, findNavigator, and more. For more advanced customization, like being able to react to changes in the content, you’ll need to connect it to a WebPage.
+
+WebPage
+WebPage is a brand new Observable class that can be used to load, control, and communicate with web content. You can even use it completely on its own, in cases where you don’t need to display the page directly to your users. But when you do, combining it with WebView allows you to build rich experiences, and integrate the web into your app with ease. WebPage has a full set of observable properties and functions you can use to make reacting to changes incredibly simple, especially with SwiftUI.
+
+The new URLSchemeHandler protocol makes it super easy to implement handling custom schemes so that local resources and files can be used in your app. It leverages the full capabilities of Swift and Swift Concurrency, and you just need to provide it with an AsyncSequence.
+
+WebPage.NavigationDeciding is a new protocol that lets you customize how navigation policies should behave in your app across different stages of a navigation. In addition to WebPage.NavigationDeciding, there’s also WebPage.DialogPresenting to customize how dialogs presented from JS should be displayed.
+
+struct ArticleView: View {
+    @Environment(ArticleViewModel.self) private var model
+
+    var body: some View {
+        WebView(model.page)
+            .navigationTitle(model.page.title)
+    }
+}
+We look forward to seeing what Apple Developers do with the new WebPage and WebView types for Swift and SwiftUI. As a web developer, it’s now easier than ever for you to use the skills you have to create an app for iOS, iPadOS, macOS, and visionOS.
+
+Screenshot of an iPad app, with a menu created in Swift, and content that is pulled from the web.
+To learn more about the new SwiftUI WebKit API, watch Meet WebKit for SwiftUI at WWDC25, and explore the API in the developer documentation on developer.apple.com.
+
+<model> on visionOS
+Now on visionOS, Safari supports the <model> element. It’s a brand new HTML element that’s similar to img or video — only now you can embed interactive 3D models into the webpage, and let users interact with them with a single attribute. And if they want to see your models in their own space at real size, they can drag the models off the page with a single gesture.
+
+Basic usage
+The syntax for showing a model is simple. Using the same USDZ files that work with AR Quick Look today, you can set the src attribute of the model element:
+
+<model src="teapot.usdz">
+  <img src="fallback/teapot.jpg" alt="a teapot">
+</model>
+Lighting
+Lighting is an important part of making your 3D content look good, and the model element makes that straightforward too. You can apply an environment map as any image, including the high-dynamic range OpenEXR .exr and Radiance HDR .hdr formats by setting the environmentmap attribute:
+
+<model src="teapot.usdz" environmentmap="night.hdr">
+  <img src="fallback/teapot-night.jpg" alt="a teapot at night">
+</model>
+Animation and playback
+You can work with models containing animated content too. Use the autoplay attribute to declaratively set a model’s animation to run as soon as it loads, keep the animation going using the loop attribute,
+
+<model autoplay loop src="teapot-animated.usdz">
+  <img src="fallback/teapot-animated.jpg" alt="a teapot with a stowaway!">
+</model>
+or use the JavaScript API for more fine-grained control:
+
+const model = document.querySelector('model');
+model.playbackRate = 0.5; //set 50% speed
+model.currentTime = 6; //set the animation to 6 seconds in
+model.play();
+Rotation and interaction
+To let users spin and tumble a model themselves, set the model’s stagemode attribute to orbit and everything will be handled for you.
+
+<model stagemode="orbit" src="teapot.usdz">
+  <img src="fallback/teapot-orbit.jpg" alt="a teapot for examining">
+</model>
+Or if you’re after programmatic control, models can be scaled, rotated and moved (translated) using their entityTransform property, which can takes a DOMMatrix value. You can compose these with functions like translate, rotate and scale3d to orient the model the way you want.
+
+<model id="rotating-teapot" src="teapot.usdz">
+  <img src="fallback/teapot-rotater.jpg" alt="a teapot for turning">
+</model>
+With this JavaScript:
+
+const rotatingTeapot = document.getElementById("rotating-teapot");
+await rotatingTeapot.ready;
+function rotate() {
+  rotatingTeapot.entityTransform = new DOMMatrix().rotate(0, performance.now()/10,0);
+  requestAnimationFrame(rotate);
+}
+rotate();
+There’s a lot more to discover about the model element and what you can do with it. Check out the Model element samples and the expected documentation for MDN.
+
+Immersive video and audio on visionOS
+Safari in visionOS now supports a wider range of immersive media, including spatial videos and Apple Immersive Video, and 180°, 360°, and Wide FOV (field of view) videos that conform to the new Apple Projected Media Profile (APMP). Embed your video on a webpage, and let users play it back immersively on a curved surface in 3D space.
+
+A diagram of the five kinds of immersive media — Spatial, 180 degree, 360 degree, wide FOV (field of view), Apple Immersive
+Safari also supports HTTP Live Streaming for all of these immersive media types. The existing HLS tools have been updated to support APMP segmentation, and the HLS specification has been updated with information on how to identify immersive media in an HLS manifest file.
+
+Learn more about model and immersive video by watching What’s new for the spatial web at WWDC25.
+
+WebGPU
+WebKit for Safari 26 beta adds support for WebGPU.
+
+WebGPU, a JavaScript API for running programs on the GPU, is similar to WebGL in its capabilities for graphics and rendering. Additionally, it adds compute shaders, which allow general purpose computations on the GPU, something not previously possible with WebGL.
+
+WebGPU supersedes WebGL on macOS, iOS, iPadOS, and visionOS and is preferred for new sites and web apps. It maps better to Metal, and the underlying hardware. Comparatively, WebGL required significant translation overhead due to being derived from OpenGL which was designed prior to modern GPUs.
+
+GPU programs are provided by the website or web app using the WebGPU Shading Language, known as WGSL (pronounced wig-sill). It’s a new language that is verifiably safe for the web unlike some existing shading languages which allow for unchecked bounds accesses and pointer arithmetic.
+
+WebGPU has been enabled in Safari Technology Preview for over a year, and is now shipping in Safari 26 beta for macOS, iOS, iPadOS, and visionOS. Given the level of hardware access provided by WebGPU, much consideration was taken to ensure WebGPU does not expose new security attack surfaces. Additionally, validation performed was streamlined recently to minimize overhead and maintain closer to native application performance.
+
+As a developer you are most likely to leverage the power of WebGPU through a framework. Currently, Babylon.js, Three.js, Unity, PlayCanvas, Transformers.js, ONNX Runtime and others all work great in Safari 26 beta.
+
+Learn more by watching Unlock GPU computing with WebGPU at WWDC25.
+
+CSS
+Anchor Positioning
+Anchor positioning is a new layout mechanism for anchoring one element to another on the web. It pairs well with the popover attribute (which shipped in Safari 17.0), making it easy to create responsive menus, tooltips and more. We are especially proud of the position-area syntax that makes using Anchor Positioning more intuitive. It’s an alternative to using syntax like this when the desired outcome is actually quite simple:
+
+.thing-that-gets-anchored-to {
+  anchor-name: --profile-button;
+}
+
+.item-that-pops-up {
+  position-anchor: --profile-button;
+  position: absolute;
+  top: anchor(bottom);
+  left: anchor(left);
+ }
+Above, we use the anchor() function in combination with top, left, bottom, right from absolute positioning. That combo can be powerful, and works well when your design calls for exact-to-the-pixel layout, anchoring to multiple anchors, or animated anchors. But often, you just want to tell the browser where to put an item, and have it figure out the details. Instead of the above, you can use code like:
+
+.thing-that-gets-anchored-to {
+  anchor-name: --profile-button;
+}
+
+.item-that-pops-up {
+  position-anchor: --profile-button;
+  position-area: bottom span-right;
+}
+The position-area syntax came from a proposal we put together, as we thought about how developers would use Anchor Positioning, and how overwhelming much of CSS layout can be.
+
+Code using Anchor Positioning with the results. Watch our WWDC25 session for a walkthrough of this example. 
+Learn more about Anchor Positioning, and watch a full walkthrough of
+this example in What’s new in Safari and WebKit at WWDC25.
+You can also use position-try to make it responsive, giving it a new position to try (hence the name) if there’s not enough room to fully display the element.
+
+Currently, this first beta of Safari 26 does not support position-visibility or the implicit anchor element. We’d love to hear from you as we continue to polish Anchor Positioning through this summer beta period, preparing for a fall release. You can file issues at bugs.webkit.org.
+
+Scroll-driven Animations
+Scroll-driven animations lets you tie CSS animations to either the timeline of just how far the user has scrolled, or to how far particular content has moved through the viewport, in and out of view.
+
+For example, let’s imagine you want to animate a group of items as they scroll into view.
+
+Cards on a webpage, scrolled into the viewport, completing their animation (turning to land flat), as they reach 50%.
+
+You can declare that you want the animation to be tied to whether or not they are in view with animation-timeline: view(), and specify that the animation should begin just as each item is 0% visible and end when they are 50% across the viewport with animation-range: 0% 50%.
+
+.item {
+  animation-fill-mode: both;
+  animation-timeline: view();
+  animation-range: 0% 50%;
+  &:nth-child(3n + 1) { animation-name: in-from-left; }
+  &:nth-child(3n + 2) { animation-name: in-from-middle; }
+  &:nth-child(3n + 3) { animation-name: in-from-right; }
+}
+Watch What’s new in Safari and WebKit at WWDC25 to see the full walkthrough of this example, and learn more about what’s possible with Scroll-driven animations.
+
+Pretty text
+Safari 26 beta adds support for text-wrap: pretty. Our implementation of pretty adjusts how text wraps in an effort to even out the ragged edge, improve hyphenation, and prevent short last lines.
+
+Demo of the same text, only now with better rag. The "guides" show three vertical lines about 50 pixels apart — the far right edge is marked with a red line. 45 pixels in from the left is a vertical green line. And another 45 pixels left of that line is a vertical magenta line.
+In WebKit, all lines of text in an element are improved by pretty, not just a select group of lines at the end of the paragraph. To learn more, read Better typography with text-wrap pretty.
+
+Contrast Color
+Safari 26 beta adds support for the contrast-color() function. It lets you define a color by referencing another color and asking the browser to choose either black or white — whichever one provides more contrast.
+
+For example, we can make a button with the background color of var(--button-color), and then ask the browser to set color to either black or white, whichever one provides more contrast against that background.
+
+button {
+  background-color: var(--button-color);
+  color: contrast-color(var(--button-color));
+}
+
+
+Learn much more about contrast-color() by reading How to have the browser pick a contrasting color in CSS.
+
+Progress function
+Safari beta adds support for the CSS progress() function. It’s a math function that returns a number value representing how far along something is, how much progress it’s made between two other values.
+
+progress(<progress-value>, <progress-start>, <progress-end>)
+For example, let’s say you want to know how far along a width of a box is, compared to a specific start width and end width.
+
+--percent-of-box-width: progress(100cqw, 300px, 600px);
+Let’s imagine at a particular moment, the is container 450px wide. That’s half way in-between 300px and 600px. The progress() function will calculate this to be 50% using this formula:
+
+(progress value - progress start value) / (progress end value - progress start value)
+The result is always a number without any unit. Notice you can mix lengths with different units.
+
+Be mindful that currently progress doesn’t clamp. So it won’t stop at 0% or 100%. It will just grow above 100%, or shrink down below 0%.
+
+The progress() function is most powerful when used with other complex math. Combine with animations, gradients, or scroll timelines, and connect one set of conditions with another. There might be even more functions with which it could be combined coming to CSS in the future.
+
+And more CSS
+diagrams of how margin-trim affects layout — before and after.
+
+Safari 26 beta now supports the margin-trim: block inline syntax for trimming in both directions. Learn all about margin-trim and what the block inline value does in Easier layout with margin-trim.
+
+Safari 26 beta adds support for overflow-block and overflow-inline. These are the logical versions of overflow-x and overflow-y, making it easier to write robust code that supports multiple languages.
+
+Now Safari supports the self-alignment properties align-self and justify-self in absolute positioning.
+
+Safari 26 beta also supports the crossorigin() and referrerpolicy() modifiers on CSS image loads.
+
+Digital Credentials API
+WebKit for Safari adds support for the W3C’s Digital Credentials API. In jurisdictions that have issued such credentials, this API allows a website to securely request identity documents (e.g., a driver’s license) from Apple Wallet or other iOS applications that have registered themselves as an Identity Document Provider.
+
+The Digital Credential API is useful for situations where a high-trust credential is needed to access a service online (e.g., renting an automobile). It provides a much safer and user friendly alternative to, for example, a user having to take a photograph of their driver’s license.
+
+The Digital Credentials API leverages the existing Credential Management API and introduces a “digital” member for requesting identity documents. Requesting an identity document relies on the ISO/IEC 18013-7 Annex C international standard, which is identified by the protocol string "org-iso-mdoc".
+
+For example, to request an end-user’s driver’s license, you might do something like this. Create a button in HTML:
+
+<button onclick="verifyIdentity">Verify Identity</button>
+And then in JavaScript:
+
+async function verifyIdentity() {
+    try {
+        // Server generated and cryptography signed request data.
+        const response = await fetch("drivers/license/data");
+        const data = await response.json();
+
+        // Create the request.
+        const request = {
+            protocol: "org-iso-mdoc",
+            // What is being rquested, e.g. person's driving privileges 
+            data,
+        };
+
+        // Perform presentment request.
+        // Must be done through a user gesture!
+        const credential = await navigator.credentials.get({
+            mediation: "required",
+            digital: {
+                requests: [request],
+            },
+        });
+
+        // Send credential to server for decryption.
+        const response = await fetch("/decrypt", {
+            method: "POST",
+            body: JSON.stringify(credential.data),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        // Display it...
+        const json = await response.json();
+        presentDetails(json);
+    } catch (err) {
+        // Deal with any errors...
+    }
+}
+To learn more about this transformative technology watch Verify identity documents on the web at WWDC25. And keep an eye on Issue 268516 for more about support of the Digital Credentials API in WKWebView.
+
+Web API
+Web developers can use the Trusted Types API, now supported in Safari beta, to ensure that end user input does not lead to client-side cross-site scripting (XSS). The API guarantees that input can be sanitized using a developer-specified function before being passed to vulnerable APIs.
+
+We’ve added support for the URL Pattern Standard, which provides an efficient and performant way for web developers to match URLs using regular expressions through the URLPattern object. For instance, if your blog posts follow the pattern of /blog/title-of-the-post you could match them as follows:
+
+const pattern = new URLPattern({ pathname: "/blog/:title" });
+pattern.test("https://example.org/blog/wwdc25"); // true
+pattern.test("https://example.org/about"); // false
+Coming to Safari is the WebAuthn Signal API, which allows websites to report credential updates (like username changes or revocations) to credential providers, ensuring a more accurate and consistent user experience with passkeys. The new PublicKeyCredential.signal* methods enable websites to communicate these changes, improving credential management and streamlining sign-in flows. This enhancement empowers websites to provide a more seamless and secure WebAuthn experience.
+
+There’s also now support for the File System WritableStream API, enabling direct writing to files within the user’s file system. This API provides an efficient and streamlined way to save data, allowing developers to build applications with enhanced file handling capabilities, such as direct downloads and in-place file editing.
+
+WebKit for Safari 26 beta adds support for the alg parameter when importing or exporting Edward’s-curve based JSON Web Keys in WebCrypto.
+
+Support for scrollMargin in IntersectionObserver is here for more precise intersection detection. This allows you to define margins around the root element, similar to rootMargin, providing finer control over when intersection events are triggered.
+
+JavaScript
+WebKit for Safari 26 beta adds support for Pattern Modifiers in JavaScript’s RegExp objects. Pattern modifiers allow more fine-grained control over the behavior of regular expressions through adding and removing flags within a regular expression.
+
+Several features from the Explicit Resource Management Proposal are also now supported:
+
+the @@dispose and @@asyncDispose methods for performing an explicit resource cleanup on an object
+the SuppressedError constructor
+the DisposableStack constructor
+Editing
+For editing, Safari 26 beta adds support for rendering native selection UI inside scrolled content.
+
+SVG
+For SVG containers, Safari 26 beta adds support for pointer-events="bounding-box".
+
+Media
+Safari 26 beta also adds support for ALAC and PCM audio in MediaRecorder.
+
+const video = await navigator.mediaDevices.getUserMedia({ audio: true });
+const recorder = new MediaRecorder(video, {
+    mimeType: "audio/mp4; codecs=alac",
+});
+Safari 26 beta expands support for WebCodecs API by adding AudioEncoder and AudioDecoder. WebCodecs gives developers low-level access to the individual frames of a video stream and chunks of audio. These additions make it possible to encode AudioData objects and decode EncodedAudioChunk objects.
+
+Safari 26 beta now includes several improvements for Media Source API (MSE). It adds support for detachable MediaSource objects to allow for seamless switching between objects attached to a media element. And it adds support for MediaSource prefers DecompressionSession.
+
+WebRTC
+WebKit brings multiple updates for WebRTC, adding support for:
+
+Exposing CSRC information for RTCEncodedVideoStream
+Speaker Selection API on iOS and iPadOS
+Serialisation of RTCEncodedAudioFrame and RTCEncodedVideoFrame
+ImageCapture.grabFrame
+RTcRtpScriptTransformer.generateKeyFrame to take a rid parameter
+RTCEncodedAudioFrame and RTCEncodedVideoFrame constructors
+Web Inspector
+To inspect a Service Worker you need to open a Web Inspector from Safari’s Develop menu. That’s because the execution context of a Service Worker is independent of the page that installed it. But the action handled by a Service Worker might have already occurred by the time you get to it via the Develop menu. This can happen, for example, with Web Push events where the Service Worker has already handled the incoming push.
+
+To address this, Safari 26 beta introduces automatic inspection and pausing of Service Workers. This is similar to the existing feature for automatic inspection and pausing of JSContexts. To use it, open the Inspect Apps and Devices tool from the Develop menu. Identify the app or Home Screen Web App that uses a Service Worker you want to inspect and, from the three-dots menu, select the option labeled Automatically Inspect New Service Workers. The next time a Service Worker runs in that app, a Web Inspector window will open automatically for it. Use the Automatically Pause New Service Workers option to also pause JavaScript execution in the Service Worker as soon as it’s inspected. This allows you to set breakpoints and step through the code as actions are handled.
+
+Screenshot of the Apps and Devices Inspection window
+Safari 26 beta makes it easier to debug Worker-related memory and performance issues using the Timelines tab in Web Inspector. Breakpoints, profiling data, events, call trees, and heap snapshots are now correctly attributed to each Worker and not its associated page. JavaScript code that runs in a Worker may also call debugger, console.profile, etc to supplement timeline data with application-specific milestones. Lastly, it is now possible to export and import data gathered from Workers in a Timeline recording.
+
+Screenshot of Web Inspector Timelines tab, with all kinds of information about JavaScript events across time. 
+The Elements node tree in Web Inspector now shows a badge labeled Slotted next to nodes that have been inserted into corresponding <slot> nodes within Custom Elements. Click the badge to expand the node tree into the Shadow DOM of the Custom Element and jump to the <slot> node. If there is a correspondence, the <slot> node has a badge labelled Assigned next to it. Click this badge to jump to the node from the light DOM that is slotted here.
+
+Screenshot of Web Inspector Elements tab.
+The Web Inspector debugger has been updated to provide a more intuitive debugging experience for asynchronous code. You can now step over an await statement as if it were synchronous, meaning the debugger will skip the underlying asynchronous mechanics and move to the next line of code in the function. This simplifies debugging because it allows you to focus on the intended logic of your code, rather than the potentially confusing execution path introduced by await.
+
+Web Extensions
+The new web-based Safari Web Extension Packager allows developers to take their existing web extension resources and prepare them for testing in Safari through TestFlight and distribution through the App Store. The tool is available in App Store Connect and uses Xcode Cloud to package the extension resources you provide into a signed app + extension bundle that can be used in Safari on macOS, iOS, iPadOS, and visionOS. Learn more about using the tool in our documentation on developer.apple.com.
+
+Web Extension commands are now shown in the menubar on macOS and iPadOS. On macOS, users can customize the keyboard shortcut associated with a command in Safari Settings.
+
+WebKit API
+Several improvements to WebKit API are available now in iOS, iPadOS, macOS, and visionOS beta.
+
+Screen Time support
+Local storage and session storage restoration APIs for WKWebView
+The ability to applying backdrop-filter to content behind a transparent webview
+WebAssembly
+As WebAssembly continues to grow in popularity, WebKit has been improving WebAssembly performance across the board. Now, WebAssembly is first evaluated by the in-place interpreter, which allows large WebAssembly code to run even faster.
+
+Privacy
+In our continuing efforts to improve privacy and protect users, Safari beta now prevents known fingerprinting scripts from reliably accessing web APIs that may reveal device characteristics, such as screen dimensions, hardware concurrency, the list of voices available through the SpeechSynthesis API,  Pay payment capabilities, web audio readback, 2D canvas and more. Safari additionally prevents these scripts from setting long-lived script-written storage such as cookies or LocalStorage. And lastly, Safari prevents known fingerprinting scripts from reading state that could be used for navigational tracking, such as query parameters and document.referrer.
+
+Networking
+WebKit now supports <link rel=dns-prefetch> on iOS, iPadOS and visionOS. It gives a hint to the browser to perform a DNS lookup in the background to improve performance. Supported on macOS since Safari 5, it now has improved privacy.
+
+Lockdown Mode
+Available on iOS, iPadOS, watchOS, and macOS, Lockdown Mode is an optional, extreme protection that’s designed for the very few individuals who, because of who they are or what they do, might be personally targeted by some of the most sophisticated digital threats. This includes limiting some of what websites can do to ensure the highest level of protection.
+
+Since its beginning, Lockdown Mode disallowed the use of most web fonts. Now instead, web fonts are evaluated by the new Safe Font Parser, and if they pass the evaluation, they are allowed. This means almost all content will be displayed using the specified web fonts in Lockdown Mode.
+
+Website Compatibility
+Now in Safari on macOS, iOS, and iPadOS, users can report an issue anytime they are having trouble with a webpage.
+
+Safari on iPhone showing UI labeled "Report an issue" in the Page menu.
+If you seem to have trouble that you don’t expect, first try reloading the page. If there’s still a problem, go to the Page menu, where you’ll find “Report a Website issue…” This brings up a quick set of multiple choice questions that provide the key information for us to spot patterns and better ensure a great experience in Safari.
+
+Bug Fixes and more
+Along with all of these new features, WebKit for Safari 26 beta includes a plethora of fixes to existing features.
+
+Accessibility
+Fixed aria-expanded attribute support on navigation links. (141163086)
+Fixed presentational images with empty alt attributes to be ignored by assistive technology, even when additional labeling attributes are set. (146429365)
+Fixed <figcaption> within a <figure> element to only contribute to the accessible name of an <img> element if the image lacks other labeling methods like alt, ARIA attributes, or the title attribute. (150597445)
+Fixed invalid values for aria-setsize and aria-posinset are now handled according to the updated ARIA specification, to ensure correct accessibility API exposure and predictable behavior for these attributes. (151113693)
+CSS
+Fixed cursor: pointer not appearing on an <area> element used in conjunction with an <img usemap="..."> element. (74483873)
+Fixed grid sizing with inline-size containment and auto-fit columns is incorrectly sized. (108897961)
+Fixed content skipped with content-visibility: auto to be findable. (141237620)
+Fixed an issue wrapping an SVG at the end of a line when using text-wrap: balance. (141532036)
+Fixed @font-face font-family descriptor to not allow a list of values. (142009630)
+Fixed the computed value of a float with absolute positioning to be none when there is no box. (144045558)
+Fixed: Updated contrast-color() to remove the max parameter. (144611470)
+Fixed buttons to not have align-items: flex-start by default. (146615626)
+Fixed @scope to create a style nested context. (148101373)
+Fixed changing content-visibility from visible to hidden to repaint correctly. (148273903)
+Fixed an issue where float boxes, selections, and carets were incorrectly painted inside skipped subtrees.(148741142)
+Fixed incorrect getBoundingClientRect() inside skipped subtree on an out-of-flow positioned box. (148770252)
+Fixed making <pre> and other elements use logical margins in the User-Agent stylesheet. (149212392)
+Canvas
+Fixed re-drawing a canvas with relative width when the parent element is resized. (121996660)
+Fixed getContext('2d', { colorSpace: 'display-p3' }) in iOS Simulator. (151188818)
+DOM
+Fixed the serialization of CDATASection nodes in HTML. (150739105)
+Editing
+Fixed the selection UI to be clipped in overflow scrolling containers. (9906345)
+Fixed selection issues caused by <br> elements between absolute positioned elements. (123637358)
+Fixed selection failing to update during auto or keyboard scrolling. (144581646)
+Forms
+Fixed form associated ElementInternals always reporting a customError when using setValidity. (115681066)
+Fixed setValidity of ElementInternals to handle missing optional anchor parameter. (123744294)
+Fixed programmatically assigned File objects to display the correct filename in <input> elements, even without a file path. (152048377)
+Fixed labels inside <select> elements to behave consistently with other browsers by using standard attribute matching instead of quirk mode handling. (152151133)
+JavaScript
+Fixed Array.prototype.pop to throw an exception when the array is frozen. (141805240)
+Fixed performance of Math.hypot() that was significantly slower than Math.sqrt(). (141821484)
+Fixed Array#indexOf and Array#includes to treat +0 and -0 as the same value. (148472519)
+Fixed iterator helpers incorrectly closing iterators on early errors. (148774612)
+Fixed Iterator.prototype.reduce failing with an undefined initial parameter. (149470140)
+Fixed f() = 1 behavior with other engines when not using strict mode. (149831750)
+Fixed nested negated classes resulting in incorrect matches. (151000852)
+Media
+Fixed picture-in-picture to exit when the video element is removed. (123869436)
+Fixed MP4 seeking with b-frames to prevent out-of-order frame display by suppressing frames with earlier presentation timestamps following the seek point. (140415210)
+Fixed media elements on iPadOS to support the volume being changed by web developers, similar to macOS and visionOS. The :volume-locked pseudo-class can continue to be used for feature detection. (141555604)
+Fixed seeking or scrubbing not always seeking to the time requested. (142275903)
+Fixed stale audio buffer data after seeking when playing sound through an AudioContext. (146057507)
+Fixed subtitle tracks with no srclang to be shown with the correct label. (147722563)
+Fixed MediaSession to handle SVG icons with subresources. (150665852)
+Fixed MediaCapabilitiesDecodingInfo.configuration to be correctly populated even when .supported is false. (150680756)
+Rendering
+Fixed an issue to allow images in scroll containers to load when they are near the viewport rather than when they are intersecting the viewport. (118706766)
+Fixed a disappearing stretched image in a vertical flexbox layout. (135897530)
+Fixed CSS gradient interpolation into regions beyond the first or last color stop. (142738948)
+Fixed integrating position-area and self-alignment properties for align-self and justify-self (145889235)
+Fixed will-change: view-transition-name to create a stacking context and a backdrop root. (146281670)
+Fixed will-change: offset-path to create a stacking context and a containing block. (146292698)
+Fixed <datalist> dropdowns not displaying option labels. (146921617)
+Fixed the text indicator sometimes getting clipped during a bounce animation. (147602900)
+Fixed geometry values inside content-visibility: hidden subtrees. (148553259)
+Fixed not marking content-visibility: hidden content for layout when targeting content-visibility: auto. (148663896)
+Fixed incorrect ruby annotation positioning in sideways-lr. (148713073)
+Fixed: Prevented hit testing content inside a skipped subtree. (148741508)
+Fixed an issue where feMerge incorrectly positioned HTML elements when merging the same feMergeNode multiple times. (149431216)
+Fixed an issue in determining when a flex item should be used for percentage resolution during intrinsic width computation. (149615295)
+Fixed an issue causing a <canvas> element to disappear for one frame if a view transition occurs. (149709642)
+Fixed invisible <audio> controls when transformed due to incorrect coordinate space calculations for clipped child elements. (150526971)
+Fixed centering text for <input type=button> elements with display: flex. (151148821)
+Fixed showing a resize cursor even when text overlaps the resize control. (151309503)
+SVG
+Fixed SVG paint server fallback handling for a non-existent URL. (144493507)
+Fixed respecting the CSS image-rendering property when drawing an SVG. (144507619)
+Fixed handling url(...) none to match the SVG Paint Server specification. (146454258)
+Fixed ancestor bounding box for “disabled” <foreignObject> and <image>. (147455573)
+Fixed: Improved handling of SVG images with subresources. (148607855)
+Safari View Controller
+Fixed lvh and vh viewport units getting incorrectly sized relative to the small viewport in SFSafariViewController. (108380836)
+Scrolling
+Fixed selection does not update during autoscroll when selecting with a gesture or a mouse. (144744443)
+Fixed autoscrolling for smooth scrolling while selecting text. (144900491)
+Service Workers
+Fixed the ReadableStream cancel method not getting reliably called in Service Worker. (144297119)
+Fixed an issue where navigation preload responses incorrectly retained a redirection flag when served from disk cache, causing security check failures during loading. (144571433)
+Tables
+Fixed table layout to only be triggered when inline-size is not auto. (147636653)
+Text
+Fixed generating scroll to text fragments around text that contains newlines. (137109344)
+Fixed generating text fragments when the selected text starts and ends in different blocks. (137761701)
+Fixed bold synthesis to be less aggressive. (138047199)
+Fixed Copy Link to Highlight not working when selecting text that is its own block and when that text exists higher up in the document. (144392379)
+Fixed selections that start or end in white space not creating text fragments. (145614181)
+Fixed <b> and <strong> to use font-weight: bolder to match the Web Specification. (146458131)
+URLs
+Fixed making URL host and hostname setters handle @ correctly. (146886347)
+Web API
+Fixed: URL’s protocol setter should forbid switching non-special to special schemes. (82549495)
+Fixed event dispatching to be done by the fullscreen rendering update steps. (103209495)
+Fixed an overly broad fullscreen exit trigger by restricting it to only text-entry elements gaining focus, preventing non-text input types from causing unexpected fullscreen exits. (136726993)
+Fixed WKDownload.originatingFrame of downloads originated without a frame. (145328556)
+Fixed fullscreen to use a single queue for event dispatching. (145372389)
+Fixed the ProgressEvent members loaded and total to use the double type as per a recent specification change. (146356214)
+Fixed Intrinsic Sizing of SVG embedded via <embed> to be invalidated on navigation. (147198632)
+Fixed an issue where pending utterances do not receive an error event when speech synthesis is cancelled.(148731039)
+Fixed escaping < and > when serializing HTML attribute values. (150520333)
+Fixed making the SpeechRecognition interface available only within a secure context. (151240414)
+Fixed the option element to not trim the label value and correctly handle an empty label. (151309514)
+Web Animations
+Fixed CSS scroll-driven animations on pages using requestAnimationFrame to animate correctly after navigating away and back to the page. (141528296)
+Fixed computing the time offset as needed when applying accelerated actions. (142604875)
+Web Extensions
+Fixed a declarativeNetRequest bug that prevents redirects to extension resources. (145569361)
+Fixed converting declarativeNetRequest rules so that higher numbers are treated as higher priority. (145570245)
+Fixed an issue causing wasm-unsafe-eval to not get parsed as a valid CSP keyword. (147551225)
+Fixed permissions.getAll() to return the correct origins if all urls and/or hosts match pattern(s) have been granted. (147872012)
+Web Inspector
+Fixed pretty-printing CSS to avoid adding a space after the universal selector () when followed by a pseudo-class or pseudo-element, preventing unintended changes to CSS selector behavior. (71544976) Fixed to show a separate overview for each target in the Timelines tab. (146356054)
+Fixed a performance issue when blackboxing a large number of sourcemaps. (148116377)
+Fixed the debugger to step over an await statement as though it is synchronous code. (149133320)
+Fixed parsing sourcemaps asynchronously so that large sourcemaps do not block rendering. (151269154)
+Fixed the Timelines tab to consistently display the target’s hierarchical path for JavaScript and Events to prevent confusion when working with multiple targets. (152357197)
+WebRTC
+Fixed switching from speaker to receiver does not work the first time, but only the second time. (141685006)
+Fixed enumerateDevices returning devices as available when permissions are denied. (147313922)
+Fixed enumerateDevices to not check for device permission. (148094614)
+Fixed WebRTC encoded transform to transfer to the RTC encoded frame array buffer. (148343876)
+Fixed RTC encoded frame timestamp should be persistent. (148580865)
+Fixed the configurationchange event to fire when a microphone’s audio unit changes its echo cancellation mode, ensuring web pages are notified of such changes to update track settings accordingly. (150770940)
+Try out Safari 26 beta
+You can test Safari 26 beta by installing the beta of macOS Tahoe 26, iOS 26, iPadOS 26 or visionOS 26. Or if you’d like, try out Safari 26 beta on macOS Sequoia or macOS Sonoma by downloading Safari 26 beta, once it’s available. (Sign in using a free Apple ID to download. Installing Safari 26 beta on macOS Sequoia or macOS Sonoma will replace your existing version of Safari with no way to revert to an earlier version.)
+
+You can also help test many of these features in Safari Technology Preview on macOS.

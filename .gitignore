@@ -1,0 +1,90 @@
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.xcuserstate
+project.xcworkspace
+
+# Swift Package Manager
+Packages/
+Package.pins
+Package.resolved
+*.xcodeproj/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# node_modules
+node_modules/
+
+# Bower dependency directory
+bower_components
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains IDEs
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+Examples/.build/
+Examples/.swiftpm/
+Examples/.vscode/
+Examples/.DS_Store
+Examples/.gitignore
+Examples/.gitignore
+
+.claude/
+.build/
+.swiftpm/

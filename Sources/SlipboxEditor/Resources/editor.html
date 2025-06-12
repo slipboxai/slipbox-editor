@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SlipboxEditor</title>
+    
+    <!-- Load Quill from local bundle for offline support -->
+    <link href="quill/quill.snow.css" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #editor-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #editor {
+            flex: 1;
+            overflow-y: auto;
+            border: none;
+        }
+        
+        .ql-toolbar {
+            display: none; /* We're using native toolbar */
+        }
+        
+        .ql-container {
+            border: none;
+            font-size: 16px;
+        }
+        
+        .ql-editor {
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: calc(100vh - 40px);
+        }
+        
+        .ql-editor.ql-blank::before {
+            color: #999;
+            font-style: normal;
+        }
+        
+        /* Custom styles for better native feel */
+        .ql-editor h1 { 
+            font-size: 2em; 
+            margin: 0.67em 0; 
+            font-weight: 600;
+        }
+        .ql-editor h2 { 
+            font-size: 1.5em; 
+            margin: 0.75em 0; 
+            font-weight: 600;
+        }
+        .ql-editor h3 { 
+            font-size: 1.17em; 
+            margin: 0.83em 0; 
+            font-weight: 600;
+        }
+        
+        .ql-editor img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 1em 0;
+        }
+        
+        .ql-editor blockquote {
+            border-left: 4px solid #007AFF;
+            margin: 1em 0;
+            padding-left: 1em;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .ql-editor pre {
+            background: #f5f5f5;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+        }
+        
+        .ql-editor ul, .ql-editor ol {
+            padding-left: 1.5em;
+        }
+        
+        .ql-editor li {
+            margin: 0.5em 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor-container">
+        <div id="editor"></div>
+    </div>
+    
+    <!-- Load Quill from local bundle for offline support -->
+    <script src="quill/quill.js"></script>
+    
+    <script>
+        // Initialize Quill with optimized settings
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: 'Start writing...',
+            modules: {
+                toolbar: false, // Using native toolbar
+                clipboard: {
+                    matchVisual: false // Better paste behavior
+                },
+                history: {
+                    delay: 1000,
+                    maxStack: 100
+                }
+            },
+            formats: [
+                'bold', 'italic', 'underline', 'strike',
+                'header', 'blockquote', 'code-block',
+                'list', 'bullet', 'indent',
+                'link', 'image',
+                'align', 'color', 'background'
+            ]
+        });
+        
+        // Bridge object for native communication
+        window.editorBridge = {
+            // Execute commands from native
+            executeCommand: function(command) {
+                try {
+                    const cmd = typeof command === 'string' ? JSON.parse(command) : command;
+                    console.log('Executing command:', cmd);
+                    
+                    switch(cmd.action) {
+                        case 'bold':
+                        case 'italic':
+                        case 'underline':
+                        case 'strike':
+                            this.toggleFormat(cmd.action);
+                            break;
+                            
+                        case 'heading1':
+                            this.toggleHeader(1);
+                            break;
+                        case 'heading2':
+                            this.toggleHeader(2);
+                            break;
+                        case 'heading3':
+                            this.toggleHeader(3);
+                            break;
+                            
+                        case 'insertList':
+                            this.toggleFormat('list', 'bullet');
+                            break;
+                        case 'insertOrderedList':
+                            this.toggleFormat('list', 'ordered');
+                            break;
+                            
+                        case 'blockquote':
+                            this.toggleFormat('blockquote');
+                            break;
+                            
+                        case 'insertText':
+                            if (cmd.data && cmd.data.text) {
+                                const range = quill.getSelection(true);
+                                quill.insertText(range.index, cmd.data.text);
+                                quill.setSelection(range.index + cmd.data.text.length);
+                            }
+                            break;
+                            
+                        case 'insertImage':
+                            if (cmd.data && cmd.data.src) {
+                                const range = quill.getSelection(true);
+                                quill.insertEmbed(range.index, 'image', cmd.data.src);
+                                quill.setSelection(range.index + 1);
+                            }
+                            break;
+                            
+                        case 'insertLink':
+                            if (cmd.data && cmd.data.url) {
+                                const range = quill.getSelection(true);
+                                if (range.length > 0) {
+                                    quill.format('link', cmd.data.url);
+                                } else {
+                                    const text = cmd.data.text || cmd.data.url;
+                                    quill.insertText(range.index, text, 'link', cmd.data.url);
+                                    quill.setSelection(range.index + text.length);
+                                }
+                            }
+                            break;
+                            
+                        case 'setContent':
+                            if (cmd.data && cmd.data.html) {
+                                quill.root.innerHTML = cmd.data.html;
+                            }
+                            break;
+                            
+                        case 'getContent':
+                            this.sendContent();
+                            break;
+                            
+                        case 'undo':
+                            quill.history.undo();
+                            break;
+                        case 'redo':
+                            quill.history.redo();
+                            break;
+                            
+                        case 'format':
+                            if (cmd.data && cmd.data.format && cmd.data.value !== undefined) {
+                                quill.format(cmd.data.format, cmd.data.value);
+                            }
+                            break;
+                            
+                        case 'align':
+                            if (cmd.data && cmd.data.alignment) {
+                                quill.format('align', cmd.data.alignment);
+                            }
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Command execution error:', error);
+                }
+            },
+            
+            // Toggle format helpers
+            toggleFormat: function(format, value) {
+                const current = quill.getFormat();
+                if (value !== undefined) {
+                    quill.format(format, current[format] === value ? false : value);
+                } else {
+                    quill.format(format, !current[format]);
+                }
+            },
+            
+            // Toggle header
+            toggleHeader: function(level) {
+                const current = quill.getFormat();
+                const currentHeader = current.header;
+                quill.format('header', currentHeader === level ? false : level);
+            },
+            
+            // Send message to native
+            sendToNative: function(type, data) {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.editorBridge) {
+                    window.webkit.messageHandlers.editorBridge.postMessage({
+                        type: type,
+                        ...data,
+                        timestamp: Date.now()
+                    });
+                }
+            },
+            
+            // Send current content
+            sendContent: function() {
+                this.sendToNative('contentChanged', {
+                    html: quill.root.innerHTML,
+                    text: quill.getText(),
+                    length: quill.getLength()
+                });
+            },
+            
+            // Get current selection
+            getSelection: function() {
+                const range = quill.getSelection();
+                if (range) {
+                    this.sendToNative('selectionChanged', {
+                        index: range.index,
+                        length: range.length
+                    });
+                }
+                return range;
+            }
+        };
+        
+        // Set up event listeners
+        quill.on('text-change', function(delta, oldDelta, source) {
+            if (source === 'user') {
+                editorBridge.sendContent();
+            }
+        });
+        
+        quill.on('selection-change', function(range, oldRange, source) {
+            if (range) {
+                editorBridge.sendToNative('selectionChanged', {
+                    index: range.index,
+                    length: range.length
+                });
+            }
+        });
+        
+        // Focus on load
+        setTimeout(function() {
+            quill.focus();
+        }, 100);
+        
+        // Notify native that editor is ready
+        setTimeout(function() {
+            editorBridge.sendToNative('ready', {});
+        }, 200);
+        
+        // Handle keyboard shortcuts
+        quill.keyboard.addBinding({
+            key: 'B',
+            metaKey: true
+        }, function() {
+            editorBridge.toggleFormat('bold');
+            return false;
+        });
+        
+        quill.keyboard.addBinding({
+            key: 'I',
+            metaKey: true
+        }, function() {
+            editorBridge.toggleFormat('italic');
+            return false;
+        });
+        
+        quill.keyboard.addBinding({
+            key: 'U',
+            metaKey: true
+        }, function() {
+            editorBridge.toggleFormat('underline');
+            return false;
+        });
+        
+        quill.keyboard.addBinding({
+            key: 'Z',
+            metaKey: true
+        }, function() {
+            quill.history.undo();
+            return false;
+        });
+        
+        quill.keyboard.addBinding({
+            key: 'Z',
+            metaKey: true,
+            shiftKey: true
+        }, function() {
+            quill.history.redo();
+            return false;
+        });
+        
+        // Handle paste events for better content handling
+        quill.clipboard.addMatcher(Node.ELEMENT_NODE, function(node, delta) {
+            // Clean up pasted content
+            if (node.tagName === 'SPAN' && node.style.fontFamily) {
+                // Remove font family from spans to maintain consistent styling
+                node.style.fontFamily = '';
+            }
+            return delta;
+        });
+    </script>
+</body>
+</html>

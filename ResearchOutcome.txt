@@ -1,0 +1,646 @@
+# Swift 6.2 JavaScript Interoperability: Embedding WYSIWYG Editors
+
+## Understanding Swift 6.2's JavaScript Interoperability
+
+Swift 6.2 introduces powerful features to enhance performance, concurrency, and interoperability with other languages like C++, Java, and JavaScript. And now, in collaboration with the open-source community, Swift 6.2 gains support for WebAssembly.
+
+However, it's important to clarify that Swift 6.2's JavaScript interoperability comes in two distinct forms:
+
+### 1. WebAssembly/JavaScriptKit (for web deployment)
+JavaScriptKit is a Swift framework to interact with JavaScript through WebAssembly. You can use any JavaScript API from Swift with this library. This approach is primarily for:
+- Running Swift code in browsers via WebAssembly
+- Building web applications with Swift
+- Node.js integration
+
+### 2. JavaScriptCore (for native iOS/macOS apps)
+Evaluate JavaScript programs from within an app, and support JavaScript scripting of your app. This is the traditional approach for:
+- Embedding JavaScript in native iOS/macOS apps
+- Creating hybrid applications
+- Running WYSIWYG editors within native apps
+
+**For your use case** (embedding a WYSIWYG editor in native iOS/macOS apps), you'll still use JavaScriptCore with WKWebView, not the WebAssembly approach.
+
+## The Enhanced JavaScriptCore Approach
+
+While Swift 6.2 doesn't fundamentally change how JavaScriptCore works, the improved language features and better error handling make JavaScript integration smoother. Here's how to implement a WYSIWYG editor using the current best practices:
+
+### Why This Hasn't Changed (Yet)
+
+JavaScriptCore provides direct access to WebKit's JavaScript engine in your apps. You can execute JavaScript code within a context by calling the evaluateScript(_:) method on a JSContext object. The core JavaScriptCore framework remains the standard for native app JavaScript integration because:
+
+1. **Native Performance**: Runs directly in the app without WebAssembly overhead
+2. **Platform Integration**: Full access to iOS/macOS APIs
+3. **Proven Stability**: Battle-tested in production apps
+4. **WebKit Integration**: Seamless with WKWebView
+
+## Implementing a WYSIWYG Editor with Current Best Practices
+
+### Architecture Overview
+
+For native iOS/macOS apps, the optimal approach combines:
+- **WKWebView** for rendering the editor UI
+- **WKScriptMessageHandler** for Swift↔JavaScript communication
+- **JavaScriptCore** for direct JavaScript execution when needed
+- **Quill.js** as the recommended editor (lightweight, offline-capable)
+
+### Complete Implementation
+
+#### 1. Swift Side - Main Editor View
+
+```swift
+import SwiftUI
+import WebKit
+import JavaScriptCore
+
+// MARK: - Editor State Management
+@MainActor
+class WYSIWYGEditorModel: ObservableObject {
+    @Published var htmlContent: String = ""
+    @Published var plainText: String = ""
+    @Published var isReady: Bool = false
+    @Published var selectedRange: NSRange?
+    
+    private var webView: WKWebView?
+    private var jsContext: JSContext?
+    
+    init() {
+        setupJavaScriptContext()
+    }
+    
+    private func setupJavaScriptContext() {
+        jsContext = JSContext()
+        
+        // Configure error handling
+        jsContext?.exceptionHandler = { context, exception in
+            print("JS Exception: \(exception?.toString() ?? "unknown error")")
+        }
+        
+        // Add console.log support
+        let logFunction: @convention(block) (String) -> Void = { message in
+            print("JS Log: \(message)")
+        }
+        jsContext?.setObject(logFunction, forKeyedSubscript: "consoleLog" as NSString)
+        jsContext?.evaluateScript("console = { log: consoleLog }")
+    }
+    
+    func setWebView(_ webView: WKWebView) {
+        self.webView = webView
+    }
+    
+    func executeCommand(_ command: EditorCommand) async throws {
+        guard let webView = webView else { return }
+        
+        let encoder = JSONEncoder()
+        let jsonData = try encoder.encode(command)
+        let jsonString = String(data: jsonData, encoding: .utf8)!
+        
+        let js = "window.editorBridge.executeCommand(\(jsonString))"
+        _ = try await webView.evaluateJavaScript(js)
+    }
+}
+
+// MARK: - Editor Commands
+struct EditorCommand: Codable {
+    enum Action: String, Codable {
+        case bold, italic, underline, strike
+        case insertText, insertImage, insertLink
+        case setContent, getContent
+        case format, align
+    }
+    
+    let action: Action
+    let data: [String: AnyCodable]?
+}
+
+// MARK: - SwiftUI View
+struct WYSIWYGEditorView: View {
+    @StateObject private var model = WYSIWYGEditorModel()
+    @State private var showingImagePicker = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Toolbar
+            EditorToolbar(model: model, showingImagePicker: $showingImagePicker)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color(NSColor.controlBackgroundColor))
+            
+            Divider()
+            
+            // Editor
+            EditorWebView(model: model)
+                .overlay(alignment: .center) {
+                    if !model.isReady {
+                        ProgressView("Loading editor...")
+                            .padding()
+                            .background(.regularMaterial)
+                            .cornerRadius(8)
+                    }
+                }
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker { image in
+                Task {
+                    await insertImage(image)
+                }
+            }
+        }
+    }
+    
+    private func insertImage(_ image: NSImage) async {
+        // Convert to base64
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let jpegData = bitmap.representation(using: .jpeg, properties: [:]) else {
+            return
+        }
+        
+        let base64 = jpegData.base64EncodedString()
+        let dataURL = "data:image/jpeg;base64,\(base64)"
+        
+        let command = EditorCommand(
+            action: .insertImage,
+            data: ["src": AnyCodable(dataURL)]
+        )
+        
+        try? await model.executeCommand(command)
+    }
+}
+
+// MARK: - Toolbar
+struct EditorToolbar: View {
+    @ObservedObject var model: WYSIWYGEditorModel
+    @Binding var showingImagePicker: Bool
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            FormatButtonGroup(model: model)
+            
+            Divider()
+                .frame(height: 20)
+            
+            AlignmentButtonGroup(model: model)
+            
+            Spacer()
+            
+            Button(action: { showingImagePicker = true }) {
+                Label("Insert Image", systemImage: "photo")
+            }
+        }
+    }
+}
+
+struct FormatButtonGroup: View {
+    @ObservedObject var model: WYSIWYGEditorModel
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            FormatButton(model: model, action: .bold, icon: "bold")
+            FormatButton(model: model, action: .italic, icon: "italic")
+            FormatButton(model: model, action: .underline, icon: "underline")
+            FormatButton(model: model, action: .strike, icon: "strikethrough")
+        }
+    }
+}
+
+struct FormatButton: View {
+    @ObservedObject var model: WYSIWYGEditorModel
+    let action: EditorCommand.Action
+    let icon: String
+    
+    var body: some View {
+        Button(action: {
+            Task {
+                try? await model.executeCommand(EditorCommand(action: action, data: nil))
+            }
+        }) {
+            Image(systemName: icon)
+                .frame(width: 30, height: 30)
+        }
+        .buttonStyle(.plain)
+        .disabled(!model.isReady)
+    }
+}
+```
+
+#### 2. WebView Integration
+
+```swift
+import SwiftUI
+import WebKit
+
+// MARK: - WebView Wrapper
+struct EditorWebView: NSViewRepresentable {
+    @ObservedObject var model: WYSIWYGEditorModel
+    
+    func makeNSView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let contentController = WKUserContentController()
+        
+        // Add message handler
+        contentController.add(context.coordinator, name: "editorBridge")
+        config.userContentController = contentController
+        
+        // Configure for offline use
+        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+        
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        
+        // Store reference in model
+        model.setWebView(webView)
+        
+        // Load editor HTML
+        if let htmlURL = Bundle.main.url(forResource: "editor", withExtension: "html") {
+            webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+        }
+        
+        return webView
+    }
+    
+    func updateNSView(_ nsView: WKWebView, context: Context) {
+        // Updates handled through model
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(model: model)
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        let model: WYSIWYGEditorModel
+        
+        init(model: WYSIWYGEditorModel) {
+            self.model = model
+        }
+        
+        // MARK: - WKNavigationDelegate
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Editor loaded
+        }
+        
+        // MARK: - WKScriptMessageHandler
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard let body = message.body as? [String: Any] else { return }
+            
+            DispatchQueue.main.async { [weak self] in
+                self?.handleMessage(body)
+            }
+        }
+        
+        private func handleMessage(_ data: [String: Any]) {
+            guard let type = data["type"] as? String else { return }
+            
+            switch type {
+            case "ready":
+                model.isReady = true
+                
+            case "contentChanged":
+                if let html = data["html"] as? String {
+                    model.htmlContent = html
+                }
+                if let text = data["text"] as? String {
+                    model.plainText = text
+                }
+                
+            case "selectionChanged":
+                if let index = data["index"] as? Int,
+                   let length = data["length"] as? Int {
+                    model.selectedRange = NSRange(location: index, length: length)
+                }
+                
+            default:
+                print("Unknown message type: \(type)")
+            }
+        }
+    }
+}
+```
+
+#### 3. HTML/JavaScript Implementation (editor.html)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WYSIWYG Editor</title>
+    
+    <!-- Include Quill from local bundle for offline support -->
+    <link href="quill/quill.snow.css" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        
+        #editor-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #editor {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .ql-toolbar {
+            display: none; /* We're using native toolbar */
+        }
+        
+        .ql-editor {
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        /* Custom styles for better native feel */
+        .ql-editor h1 { font-size: 2em; margin: 0.67em 0; }
+        .ql-editor h2 { font-size: 1.5em; margin: 0.75em 0; }
+        .ql-editor h3 { font-size: 1.17em; margin: 0.83em 0; }
+        
+        .ql-editor img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 1em 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor-container">
+        <div id="editor"></div>
+    </div>
+    
+    <script src="quill/quill.min.js"></script>
+    
+    <script>
+        // Initialize Quill with optimized settings
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: 'Start writing...',
+            modules: {
+                toolbar: false, // Using native toolbar
+                clipboard: {
+                    matchVisual: false // Better paste behavior
+                },
+                history: {
+                    delay: 1000,
+                    maxStack: 100
+                }
+            }
+        });
+        
+        // Bridge object for native communication
+        window.editorBridge = {
+            // Execute commands from native
+            executeCommand: function(command) {
+                try {
+                    const cmd = typeof command === 'string' ? JSON.parse(command) : command;
+                    
+                    switch(cmd.action) {
+                        case 'bold':
+                        case 'italic':
+                        case 'underline':
+                        case 'strike':
+                            this.toggleFormat(cmd.action);
+                            break;
+                            
+                        case 'insertText':
+                            if (cmd.data && cmd.data.text) {
+                                quill.insertText(quill.getLength() - 1, cmd.data.text);
+                            }
+                            break;
+                            
+                        case 'insertImage':
+                            if (cmd.data && cmd.data.src) {
+                                const range = quill.getSelection(true);
+                                quill.insertEmbed(range.index, 'image', cmd.data.src);
+                                quill.setSelection(range.index + 1);
+                            }
+                            break;
+                            
+                        case 'setContent':
+                            if (cmd.data && cmd.data.html) {
+                                quill.root.innerHTML = cmd.data.html;
+                            }
+                            break;
+                            
+                        case 'getContent':
+                            this.sendContent();
+                            break;
+                            
+                        case 'format':
+                            if (cmd.data && cmd.data.format && cmd.data.value) {
+                                quill.format(cmd.data.format, cmd.data.value);
+                            }
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Command execution error:', error);
+                }
+            },
+            
+            // Toggle format helpers
+            toggleFormat: function(format) {
+                const current = quill.getFormat();
+                quill.format(format, !current[format]);
+            },
+            
+            // Send message to native
+            sendToNative: function(type, data) {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.editorBridge) {
+                    window.webkit.messageHandlers.editorBridge.postMessage({
+                        type: type,
+                        ...data,
+                        timestamp: Date.now()
+                    });
+                }
+            },
+            
+            // Send current content
+            sendContent: function() {
+                this.sendToNative('contentChanged', {
+                    html: quill.root.innerHTML,
+                    text: quill.getText(),
+                    length: quill.getLength()
+                });
+            }
+        };
+        
+        // Set up event listeners
+        quill.on('text-change', function(delta, oldDelta, source) {
+            if (source === 'user') {
+                editorBridge.sendContent();
+            }
+        });
+        
+        quill.on('selection-change', function(range, oldRange, source) {
+            if (range) {
+                editorBridge.sendToNative('selectionChanged', {
+                    index: range.index,
+                    length: range.length
+                });
+            }
+        });
+        
+        // Focus on load
+        quill.focus();
+        
+        // Notify native that editor is ready
+        setTimeout(function() {
+            editorBridge.sendToNative('ready', {});
+        }, 100);
+        
+        // Handle keyboard shortcuts
+        quill.keyboard.addBinding({
+            key: 'B',
+            metaKey: true
+        }, function() {
+            editorBridge.toggleFormat('bold');
+        });
+        
+        quill.keyboard.addBinding({
+            key: 'I',
+            metaKey: true
+        }, function() {
+            editorBridge.toggleFormat('italic');
+        });
+        
+        quill.keyboard.addBinding({
+            key: 'U',
+            metaKey: true
+        }, function() {
+            editorBridge.toggleFormat('underline');
+        });
+    </script>
+</body>
+</html>
+```
+
+## Key Advantages of This Approach
+
+### 1. True Offline Capability
+- Bundle Quill.js and all assets within your app
+- No network requests required
+- Instant loading
+
+### 2. Native Performance
+JavaScriptCore provides an environment for executing JavaScript. There is no webpage, UI or document objet model (DOM). The JavaScript environment is separate from the environment our Swift code runs in
+- Direct JavaScript execution without WebAssembly overhead
+- Native UI controls with web-based editing
+
+### 3. Type-Safe Communication
+- Codable structs for commands
+- Structured message passing
+- Compile-time safety for Swift code
+
+### 4. Cross-Platform Code Sharing
+The same implementation works on both iOS and macOS with minimal platform-specific code:
+
+```swift
+#if os(iOS)
+typealias PlatformView = UIView
+typealias PlatformViewRepresentable = UIViewRepresentable
+#else
+typealias PlatformView = NSView  
+typealias PlatformViewRepresentable = NSViewRepresentable
+#endif
+```
+
+## Advanced Features
+
+### 1. Direct JavaScript Execution
+When needed, you can execute JavaScript directly using JavaScriptCore:
+
+```swift
+extension WYSIWYGEditorModel {
+    func evaluateCustomScript(_ script: String) -> Any? {
+        return jsContext?.evaluateScript(script)?.toObject()
+    }
+    
+    func registerCustomFunction(name: String, handler: @escaping ([Any]) -> Any?) {
+        let block: @convention(block) ([Any]) -> Any? = handler
+        jsContext?.setObject(block, forKeyedSubscript: name as NSString)
+    }
+}
+```
+
+### 2. Content Serialization
+Save and restore editor state:
+
+```swift
+struct EditorState: Codable {
+    let html: String
+    let selection: NSRange?
+    let formats: [String: Bool]
+}
+
+extension WYSIWYGEditorModel {
+    func saveState() -> EditorState {
+        EditorState(
+            html: htmlContent,
+            selection: selectedRange,
+            formats: getCurrentFormats()
+        )
+    }
+    
+    func restoreState(_ state: EditorState) async {
+        let command = EditorCommand(
+            action: .setContent,
+            data: ["html": AnyCodable(state.html)]
+        )
+        try? await executeCommand(command)
+    }
+}
+```
+
+### 3. Custom Plugins
+Extend Quill with custom functionality:
+
+```javascript
+// In your HTML file
+Quill.register('modules/customModule', function(quill, options) {
+    // Custom module implementation
+});
+
+// Initialize with custom module
+const quill = new Quill('#editor', {
+    modules: {
+        customModule: true
+    }
+});
+```
+
+## Security Considerations
+
+WKWebView makes it easy and quite straightforward to load a web page, but what happens when we want to open a communication channel between the app and the web-page?
+
+1. **Content Security**: Always sanitize HTML content before displaying
+2. **Script Injection**: Use Content Security Policy headers
+3. **Message Validation**: Validate all messages from JavaScript
+4. **Sandbox Configuration**: Configure WKWebView with appropriate security settings
+
+## Performance Optimization
+
+1. **Lazy Loading**: Initialize the editor only when needed
+2. **Debounced Updates**: Throttle content change events
+3. **Memory Management**: Properly clean up JavaScript contexts
+4. **Asset Optimization**: Minimize and compress JavaScript/CSS files
+
+## Conclusion
+
+While Swift 6.2 introduces JavaScript interoperability through WebAssembly support, for native iOS/macOS apps with embedded WYSIWYG editors, the JavaScriptCore + WKWebView approach remains the optimal solution. This provides:
+
+- Native performance
+- Full platform integration  
+- Offline capability
+- Type-safe Swift-JavaScript communication
+- Cross-platform code sharing
+
+The combination of Swift's type safety with JavaScript's rich ecosystem of editors creates a powerful solution for native apps requiring rich text editing capabilities.
