@@ -2,37 +2,16 @@ import Foundation
 import SlipboxEditor
 import SwiftUI
 
-@main
-struct SlipboxEditorDemoApp: App {
-    init() {
-        // Ensure bundle identifier is set
-        if Bundle.main.bundleIdentifier == nil {
-            UserDefaults.standard.set("com.slipbox.editor.demo", forKey: "CFBundleIdentifier")
-        }
-    }
-
-    var body: some Scene {
-        WindowGroup {
-            if SlipboxEditor.isSupported {
-                ContentView()
-            } else {
-                UnsupportedView()
-            }
-        }
-        #if os(macOS)
-            .defaultSize(width: 1000, height: 700)
-        #endif
-    }
-}
-
 @available(iOS 26.0, macOS 26.0, *)
-struct ContentView: View {
+public struct ContentView: View {
     @State private var editorModel = SlipboxEditorModel()
     @State private var showingMarkdownSource = false
     @State private var showingSettings = false
     @State private var savedDocuments: [SavedDocument] = []
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationSplitView {
             sidebarView
         } detail: {
@@ -255,11 +234,16 @@ struct ContentView: View {
     }
 }
 
-struct DocumentRowView: View {
+public struct DocumentRowView: View {
     let document: SavedDocument
     let onTap: () -> Void
 
-    var body: some View {
+    public init(document: SavedDocument, onTap: @escaping () -> Void) {
+        self.document = document
+        self.onTap = onTap
+    }
+
+    public var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(document.title)
@@ -280,10 +264,14 @@ struct DocumentRowView: View {
 }
 
 @available(iOS 26.0, macOS 26.0, *)
-struct ModernStatusBar: View {
+public struct ModernStatusBar: View {
     let model: SlipboxEditorModel
 
-    var body: some View {
+    public init(model: SlipboxEditorModel) {
+        self.model = model
+    }
+
+    public var body: some View {
         HStack {
             if model.isReady {
                 HStack(spacing: 16) {
@@ -321,12 +309,16 @@ struct ModernStatusBar: View {
     }
 }
 
-struct MarkdownSourceView: View {
+public struct MarkdownSourceView: View {
     let markdown: String
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
 
-    var body: some View {
+    public init(markdown: String) {
+        self.markdown = markdown
+    }
+
+    public var body: some View {
         NavigationStack {
             ScrollView {
                 Text(markdown.isEmpty ? "No content" : markdown)
@@ -372,10 +364,12 @@ struct MarkdownSourceView: View {
     }
 }
 
-struct ModernSettingsView: View {
+public struct ModernSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         NavigationStack {
             Form {
                 Section("About SlipboxEditor 2.0") {
@@ -432,16 +426,16 @@ struct ModernSettingsView: View {
     }
 }
 
-struct ShortcutRow: View {
+public struct ShortcutRow: View {
     let name: String
     let shortcut: String
 
-    init(_ name: String, _ shortcut: String) {
+    public init(_ name: String, _ shortcut: String) {
         self.name = name
         self.shortcut = shortcut
     }
 
-    var body: some View {
+    public var body: some View {
         HStack {
             Text(name)
             Spacer()
@@ -455,8 +449,10 @@ struct ShortcutRow: View {
     }
 }
 
-struct UnsupportedView: View {
-    var body: some View {
+public struct UnsupportedView: View {
+    public init() {}
+
+    public var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
@@ -479,14 +475,14 @@ struct UnsupportedView: View {
     }
 }
 
-struct SavedDocument: Identifiable, Codable {
-    let id: UUID
-    let title: String
-    let content: String
-    let preview: String
-    let date: Date
+public struct SavedDocument: Identifiable, Codable {
+    public let id: UUID
+    public let title: String
+    public let content: String
+    public let preview: String
+    public let date: Date
 
-    init(title: String, content: String, preview: String, date: Date) {
+    public init(title: String, content: String, preview: String, date: Date) {
         self.id = UUID()
         self.title = title
         self.content = content

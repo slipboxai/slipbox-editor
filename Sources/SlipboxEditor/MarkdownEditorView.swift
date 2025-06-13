@@ -26,13 +26,27 @@ public struct MarkdownEditorView: View {
                 Divider()
 
                 // WebKit editor using new APIs
-                WebView(model.webPage)
-                    .webViewScrollPosition($scrollPosition)
-                    .findNavigator(isPresented: $findNavigatorPresented)
-                    .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-                    #if os(visionOS)
-                        .webViewScrollInputBehavior(.enabled, for: .look)
-                    #endif
+                // Create WebView conditionally to debug crash
+                Group {
+                    if model.isReady {
+                        WebView(model.webPage)
+                            .onAppear {
+                                print("WebView is appearing and model is ready")
+                            }
+                    } else {
+                        VStack {
+                            ProgressView("Loading Editor...")
+                                .progressViewStyle(CircularProgressViewStyle())
+                            Text("Initializing WebView...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .onAppear {
+                            print("Showing loading view, model.isReady = \(model.isReady)")
+                        }
+                    }
+                }
             }
             .navigationTitle(model.webPage.title ?? "Untitled")
             #if !os(macOS)
