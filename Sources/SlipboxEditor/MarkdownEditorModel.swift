@@ -49,22 +49,65 @@ public class MarkdownEditorModel {
     private func loadEditorContent() {
         print("MarkdownEditorModel: Loading editor content...")
 
-        // Load markdown editor using custom scheme
-        guard let editorURL = URL(string: "slipbox-editor://editor/index.html") else {
-            print("Error: Failed to create URL for slipbox-editor://editor/index.html")
-            return
-        }
-
-        print("MarkdownEditorModel: Loading URL: \(editorURL)")
-        let request = URLRequest(url: editorURL)
-        webPage.load(request)
-
-        // Set ready state after a short delay to allow WebView to initialize
         Task {
-            try? await Task.sleep(nanoseconds: 500_000_000)  // 500ms delay
-            await MainActor.run {
-                self.isReady = true
-                print("MarkdownEditorModel: Editor is ready")
+            do {
+                // Load HTML directly to avoid custom scheme issues
+                let htmlContent = try MarkdownSchemeHandler.loadMarkdownEditorHTML()
+                let htmlString = String(data: htmlContent, encoding: .utf8) ?? ""
+
+                print("MarkdownEditorModel: Loading HTML directly (\(htmlContent.count) bytes)")
+
+                await MainActor.run {
+                    // Load HTML string directly instead of using custom scheme
+                    // Use a file URL as base to allow relative resource loading
+                    let baseURL = URL(fileURLWithPath: NSTemporaryDirectory())
+                    webPage.load(html: htmlString, baseURL: baseURL)
+                }
+
+                // Set ready state after allowing WebView to load
+                try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second delay
+                await MainActor.run {
+                    self.isReady = true
+                    print("MarkdownEditorModel: Editor is ready")
+                }
+            } catch {
+                print("MarkdownEditorModel: Error loading content - \(error)")
+
+                // Fallback to a simple HTML page
+                await MainActor.run {
+                    let fallbackHTML = """
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <title>SlipboxEditor</title>
+                            <style>
+                                body { 
+                                    font-family: -apple-system, sans-serif; 
+                                    padding: 20px; 
+                                    background: #fff;
+                                }
+                                .editor { 
+                                    width: 100%; 
+                                    min-height: 400px; 
+                                    border: none; 
+                                    outline: none; 
+                                    font-size: 16px;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="editor" contenteditable="true" placeholder="Start writing...">
+                                Welcome to SlipboxEditor! You can start typing here.
+                            </div>
+                        </body>
+                        </html>
+                        """
+                    let baseURL = URL(fileURLWithPath: NSTemporaryDirectory())
+                    webPage.load(html: fallbackHTML, baseURL: baseURL)
+                    self.isReady = true
+                    print("MarkdownEditorModel: Loaded fallback editor")
+                }
             }
         }
     }
@@ -123,46 +166,64 @@ public class MarkdownEditorModel {
 @available(iOS 26.0, macOS 26.0, *)
 class MarkdownSchemeHandler: URLSchemeHandler {
     func reply(for request: URLRequest) -> AsyncThrowingStream<URLSchemeTaskResult, Error> {
-        AsyncThrowingStream { continuation in
-            print(
-                "MarkdownSchemeHandler: Processing request for \(request.url?.absoluteString ?? "nil")"
-            )
+        AsyncThrowingStream { @Sendable continuation in
+            Task {
+                print(
+                    "MarkdownSchemeHandler: Processing request for \(request.url?.absoluteString ?? "nil")"
+                )
 
-            do {
-                if let url = request.url, url.path.hasSuffix("index.html") {
-                    let htmlContent = try loadMarkdownEditorHTML()
+                guard let url = request.url else {
+                    print("MarkdownSchemeHandler: No URL in request")
+                    continuation.finish(throwing: MarkdownEditorError.contentLoadFailed)
+                    return
+                }
 
-                    guard
+                // Handle different resource requests
+                if url.path.contains("index.html") || url.path.isEmpty || url.path == "/" {
+                    do {
+                        let htmlContent = try MarkdownSchemeHandler.loadMarkdownEditorHTML()
+
                         let response = HTTPURLResponse(
                             url: url,
                             statusCode: 200,
                             httpVersion: "HTTP/1.1",
-                            headerFields: ["Content-Type": "text/html; charset=utf-8"]
-                        )
-                    else {
-                        print("MarkdownSchemeHandler: Failed to create HTTPURLResponse")
-                        continuation.finish(throwing: MarkdownEditorError.contentLoadFailed)
-                        return
-                    }
+                            headerFields: [
+                                "Content-Type": "text/html; charset=utf-8",
+                                "Content-Length": "\(htmlContent.count)",
+                                "Cache-Control": "no-cache",
+                            ]
+                        )!
 
-                    print("MarkdownSchemeHandler: Yielding response and data")
-                    continuation.yield(.response(response))
-                    continuation.yield(.data(htmlContent))
-                    continuation.finish()
+                        print(
+                            "MarkdownSchemeHandler: Yielding response for HTML (\(htmlContent.count) bytes)"
+                        )
+                        continuation.yield(.response(response))
+                        continuation.yield(.data(htmlContent))
+                        continuation.finish()
+                    } catch {
+                        print("MarkdownSchemeHandler: Error loading HTML - \(error)")
+                        continuation.finish(throwing: error)
+                    }
                 } else {
-                    print(
-                        "MarkdownSchemeHandler: URL path doesn't match index.html: \(request.url?.path ?? "nil")"
-                    )
-                    continuation.finish(throwing: MarkdownEditorError.contentLoadFailed)
+                    // For any other resources, return 404
+                    print("MarkdownSchemeHandler: Unknown resource: \(url.path)")
+                    let response = HTTPURLResponse(
+                        url: url,
+                        statusCode: 404,
+                        httpVersion: "HTTP/1.1",
+                        headerFields: ["Content-Type": "text/plain"]
+                    )!
+                    let notFoundData = "Not Found".data(using: .utf8)!
+
+                    continuation.yield(.response(response))
+                    continuation.yield(.data(notFoundData))
+                    continuation.finish()
                 }
-            } catch {
-                print("MarkdownSchemeHandler: Error - \(error)")
-                continuation.finish(throwing: error)
             }
         }
     }
 
-    private func loadMarkdownEditorHTML() throws -> Data {
+    static func loadMarkdownEditorHTML() throws -> Data {
         let html = """
             <!DOCTYPE html>
             <html>
@@ -605,7 +666,24 @@ public enum MarkdownEditorError: Error {
 // MARK: - String Extensions
 extension String {
     var jsonEscaped: String {
-        let data = try? JSONSerialization.data(withJSONObject: self)
-        return data.flatMap { String(data: $0, encoding: .utf8) } ?? "\"\""
+        // Properly escape string for JSON by encoding it as a JSON string
+        do {
+            let data = try JSONSerialization.data(withJSONObject: [self])
+            if let jsonString = String(data: data, encoding: .utf8) {
+                // Extract just the string part (remove array brackets)
+                let trimmed = jsonString.dropFirst().dropLast()  // Remove [ and ]
+                return String(trimmed)
+            }
+        } catch {
+            print("Error escaping JSON: \(error)")
+        }
+
+        // Fallback: manual escaping
+        return "\""
+            + self.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\t", with: "\\t") + "\""
     }
 }
