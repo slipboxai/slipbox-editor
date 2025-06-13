@@ -13,7 +13,7 @@
 
 - 📝 **Rich Text Editing**: Complete WYSIWYG editor with text formatting, bulleted/numbered lists, images, links, tables, and advanced typography
 - 🚀 **Native iOS/macOS Performance**: Leverages WKWebView and JavaScriptCore for optimal rendering speed and memory efficiency
-- 📱 **Cross-Platform Swift Package**: Universal compatibility with iOS 16.0+, macOS 13.0+, SwiftUI, and UIKit applications
+- 📱 **Cross-Platform Swift Package**: Universal compatibility with iOS 26.0+, macOS 26.0+, SwiftUI, and UIKit applications
 - 🔄 **Type-Safe Swift-JavaScript Bridge**: Structured message passing with Codable support for reliable interoperability
 - 💾 **Offline-First Architecture**: Zero network dependencies with bundled assets for consistent performance
 - 🎯 **SwiftUI Native Integration**: Drop-in view component with @StateObject and @ObservableObject support
@@ -24,7 +24,7 @@
 
 ## Technical Requirements
 
-- **iOS 16.0+** / **macOS 13.0+** - Modern platform support
+- **iOS 26.0+** / **macOS 26.0+** - Modern platform support
 - **Swift 6.2+** - Latest Swift language features and performance improvements
 - **Xcode 16.0+** - Compatible with latest development tools
 - **SwiftUI** / **UIKit** - Works with both UI frameworks
@@ -363,8 +363,8 @@ If you encounter any issues or have questions:
 
 ## Performance & Compatibility
 
-- **✅ iOS 16.0+** - Full feature support with modern SwiftUI
-- **✅ macOS 13.0+** - Native macOS integration with AppKit interoperability  
+- **✅ iOS 26.0+** - Full feature support with modern SwiftUI
+- **✅ macOS 26.0+** - Native macOS integration with AppKit interoperability  
 - **✅ Swift 6.2+** - Leverages latest language features and concurrency model
 - **⚡ Optimized Performance** - Minimal memory footprint, 60fps scrolling
 - **🔄 Backward Compatible** - Works with existing UIKit and AppKit applications
